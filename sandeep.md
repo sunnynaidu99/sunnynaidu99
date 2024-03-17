@@ -1,0 +1,230 @@
+TITTLE OF THE PROJECT:- CREDIT CARD FRAUD DETECTION
+
+
+
+
+TEAM DETAILS
+TEAM NUMBER:VH152
+NAME                EMAIL
+THOTA SAI SANDEEP    9921004984@klu.ac.in
+PROBLEM STATEMENT:- CREDIT CARD FRAUD DETECTION IN BANKS
+ABOUT PROJECT:-Detecting the credit card issues 
+TECHSTACKS USED:-PYTHON
+HOW TO RUN LOCALLY:-
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA, TruncatedSVD
+import matplotlib.patches as mpatches
+import time
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+import collections
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from imblearn.pipeline import make_pipeline as imbalanced_make_pipeline
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import NearMiss
+from imblearn.metrics import classification_report_imbalanced
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, accuracy_score, classification_report
+from collections import Counter
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.preprocessing import StandardScaler, RobustScaler
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
+from statsmodels.stats.proportion import proportions_ztest
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+import warnings
+warnings.filterwarnings("ignore")
+from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report,confusion_matrix
+df = pd.read_csv('/content/drive/MyDrive/Projects/creditcard-new.csv')
+df.head()
+df.info()
+df.describe()
+df.isnull().sum()
+rob_scaler = RobustScaler()
+
+df['scaled_amount'] = rob_scaler.fit_transform(df['Amount'].values.reshape(-1,1))
+df['scaled_time'] = rob_scaler.fit_transform(df['Time'].values.reshape(-1,1))
+
+df.drop(['Time','Amount'], axis=1, inplace=True)
+scaled_amount = df['scaled_amount']
+scaled_time = df['scaled_time']
+
+df.drop(['scaled_amount', 'scaled_time'], axis=1, inplace=True)
+df.insert(0, 'scaled_amount', scaled_amount)
+df.insert(1, 'scaled_time', scaled_time)
+df.head()
+X = df.drop('Class', axis=1)
+y = df['Class']
+original_Xtrain, original_Xtest, original_ytrain, original_ytest = train_test_split(X, y, test_size=0.2, random_state=42)
+original_Xtrain.shape, original_Xtest.shape, original_ytrain.shape, original_ytest.shape
+
+count_train = original_ytrain.value_counts()[1]
+count_test = original_ytest.value_counts()[1]
+count_train, count_test
+z_stat, p = proportions_ztest(count=[count_train, count_test], nobs=[original_ytrain.shape[0], original_ytest.shape[0]])
+print('z-stat = {:5.3f}, p = {:5.3f}'.format(z_stat, p))
+
+original_Xtrain = original_Xtrain.values
+original_Xtest = original_Xtest.values
+original_ytrain = original_ytrain.values
+original_ytest = original_ytest.values
+df = df.sample(frac=1)
+fraud_df = df.loc[df['Class'] == 1]
+non_fraud_df = df.loc[df['Class'] == 0][:492]
+combined_df = pd.concat([fraud_df, non_fraud_df])
+new_df = combined_df.sample(frac=1, random_state=42)
+new_df.head()
+plt.figure(figsize=(12,10))
+sub_sample_corr = new_df.corr()
+sns.heatmap(sub_sample_corr, cmap='coolwarm',xticklabels=1, yticklabels=1)
+X = new_df.drop('Class', axis=1)
+y = new_df['Class']
+print(y)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train.shape, X_test.shape, y_train.shape, y_test.shape
+X_train =X_train.values
+X_test = X_test.values
+y_train = y_train.values
+y_test = y_test.values
+# Logistic Regression
+LR = LogisticRegression().fit(X_train, y_train)
+y_pred=LR.predict(X_test)
+x_pred=LR.predict(X_train)
+plt.scatter(X_test[:, 0], X_test[:,1], c=y_pred)
+plt.plot(X_train,x_pred,color="blue")
+plt.xlabel('Transactions ')
+plt.ylabel('Frauds')
+plt.title('Credit card fraud calssification')
+plt.show()
+trainning_score_LR = cross_val_score(LR, X_train, y_train, cv=5)
+print("Logistic Regression has a trainning accuracy score of", round(trainning_score_LR.mean(), 2) * 100, "%")
+# Logistic Regression fine-tuning
+LR_param = {"penalty": ['l1', 'l2'], 'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]}
+grid_LR = GridSearchCV(LogisticRegression(), LR_param)
+grid_LR.fit(X_train, y_train)
+LR_fineTuned = grid_LR.best_estimator_
+# Logistic Regression Prediction
+LR_prediction = LR_fineTuned.predict(original_Xtest)
+print(classification_report(original_ytest,LR_prediction))
+print(confusion_matrix(original_ytest,LR_prediction))
+# Knn
+knn = KNeighborsClassifier().fit(X_train, y_train)
+y_pred=knn.predict(X_test)
+plt.scatter(X_test[:, 0], X_test[:,1], c=y_pred)
+plt.xlabel('Transactions ')
+plt.ylabel('Frauds')
+plt.title('Credit card fraud calssification')
+plt.show()
+training_score_knn = cross_val_score(knn, X_train, y_train, cv=5)
+
+print("Knn has a training accuracy score of", round(training_score_knn.mean(),2) * 100, "%")
+
+# SVM
+SVM = SVC().fit(X_train, y_train)
+y_pred=SVM.predict(X_test)
+plt.scatter(X_test[:, 0], X_test[:, 1], c=y_pred)
+plt.xlabel('Transactions ')
+plt.ylabel('Frauds')
+plt.title('Credit card fraud calssification')
+plt.show()
+training_score_svc = cross_val_score(SVM, X_train, y_train, cv=5)
+print("SVM has a training accuracy score of", round(training_score_svc.mean(),2) * 100, "%")
+# DecisionTree
+DT = DecisionTreeClassifier().fit(X_train, y_train)
+y_pred=DT.predict(X_test)
+from sklearn import tree
+f=tree.plot_tree(DT)
+print(f)
+training_score_DT = cross_val_score(DT, X_train, y_train, cv=5)
+print("DecisionTree has a training accuracy score of", round(training_score_DT.mean(),2) * 100, "%")
+# DecisionTree fine-tuning
+tree_params = {"criterion": ["gini", "entropy"], "max_depth": list(range(2,4,1)),
+              "min_samples_leaf": list(range(5,7,1))}
+grid_tree = GridSearchCV(DecisionTreeClassifier(), tree_params)
+grid_tree.fit(X_train, y_train)
+DT_fineTuned = grid_tree.best_estimator_
+# DecisionTree Prediction
+DT_prediction = DT_fineTuned.predict(original_Xtest)
+print(classification_report(original_ytest, DT_prediction))
+print(confusion_matrix(original_ytest,DT_prediction))
+# Random Forest
+RF = RandomForestClassifier(n_estimators=200).fit(X_train, y_train)
+predictions=RF.predict(X_test)
+print(predictions)
+print(len(predictions))
+training_score_RF = cross_val_score(RF, X_train,y_train, cv=5)
+print("RandomForest has a training accuracy score of", round(training_score_RF.mean(),2) * 100, "%")
+from sklearn.naive_bayes import GaussianNB
+
+
+# instantiate the model
+gnb = GaussianNB()
+
+
+# fit the model
+gnb.fit(X_train, y_train)
+y_pred = gnb.predict(X_test)
+
+y_pred
+print('Model accuracy score: {0:0.4f}'. format(accuracy_score(y_test, y_pred)))
+!pip install gradio
+def classify(num):
+  if num<=0:
+    return 'The transaction is Fair'
+  elif num<=1:
+    return 'The transaction is Fraud'
+    import gradio as gr
+def predict_fraud(V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V24,V25,V26,V27,V28,Amount,Class):
+  input_array=np.array([[V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V24,V25,V26,V27,V28,Amount,Class]])
+  pred=RF.predict(input_array)
+  output=classify(pred[0])
+  if output=='The transaction is Fair':
+    return[(0,output)]
+  elif output=='The transaction is Fraud':
+    return[(1,output)]
+    V1=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V1')
+V2=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V2')
+V3=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V3')
+V4=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V4')
+V5=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V5')
+V6=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V6')
+V7=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V7')
+V8=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V8')
+V9=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V9')
+V10=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V10')
+V11=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V11')
+V12=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V12')
+V13=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V13')
+V14=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V14')
+V15=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V15')
+V16=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V16')
+V17=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V17')
+V18=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V18')
+V19=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V19')
+V20=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V20')
+V21=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V21')
+V22=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V22')
+V23=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V23')
+V24=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V24')
+V25=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V25')
+V26=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V26')
+V27=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V27')
+V28=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='V28')
+Amount=gr.inputs.Slider(minimum=0,maximum=1000,default=148,label='Amount of transaction')
+Class=gr.inputs.Slider(minimum=0,maximum=1,default=0,label='class')
+op=gr.outputs.HighlightedText(color_map={"The transaction is Fair":"green","The transaction is Fraud":"red"})
+gr.Interface(predict_fraud,inputs=[V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V24,V25,V26,V27,V28,Amount,Class],outputs=op,live=True).launch(debug=True)
+DECLARATION:-We confirm that the project show cased here was either developed entirely during the hackathon or underwent significant updates within the hackathon timeframe
+
